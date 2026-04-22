@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yes24 도서 트렌드 — 카테고리별 베스트셀러 & 신작</title>
+  <meta name="description" content="Yes24에서 수집한 카테고리별 베스트셀러 및 신작 도서 정보를 한눈에 확인하고 CSV로 다운로드하세요." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Tokens ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --border-hover: #58a6ff;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-glow: rgba(88,166,255,0.3);
+      --accent2: #f78166;
+      --accent3: #3fb950;
+      --gold: #d4a017;
+      --silver: #a8b3c4;
+      --bronze: #cd7f32;
+      --tag-best-bg: rgba(88,166,255,0.15);
+      --tag-best-text: #58a6ff;
+      --tag-new-bg: rgba(63,185,80,0.15);
+      --tag-new-text: #3fb950;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --shadow-hover: 0 12px 48px rgba(0,0,0,0.6);
+      --font: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+      --nav-height: 64px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,17,23,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo {
+      font-size: 1.3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), #a371f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+    .logo span { font-weight: 400; opacity: 0.7; font-size: 0.85rem; -webkit-text-fill-color: var(--text-muted); }
+    .header-spacer { flex: 1; }
+    #updatedAt {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ── Hero ────────────────────────────────────────────────────── */
+    .hero {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 48px 24px 32px;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, #58a6ff, #a371f7, #f78166);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p { color: var(--text-muted); font-size: 1rem; margin-bottom: 0; }
+
+    /* ── Controls ────────────────────────────────────────────────── */
+    .controls {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px 32px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    /* Mode tabs */
+    .mode-tabs {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      gap: 2px;
+    }
+    .mode-tab {
+      padding: 6px 18px;
+      border-radius: 6px;
+      border: none;
+      font-family: var(--font);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: var(--text-muted);
+    }
+    .mode-tab.active {
+      background: var(--accent);
+      color: #000;
+      box-shadow: 0 0 16px rgba(88,166,255,0.3);
+    }
+    .mode-tab:not(.active):hover { background: var(--surface2); color: var(--text); }
+
+    /* ── Category Bar ───────────────────────────────────────────── */
+    .category-section {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 64px;
+      z-index: 90;
+      padding: 12px 0;
+    }
+    .category-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .category-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px; /* Align with first row */
+    }
+    .cat-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 4px 0;
+      flex: 1;
+    }
+    
+    .cat-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+    }
+    .cat-chip:hover { 
+      border-color: var(--accent); 
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .cat-chip.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    /* ── Controls ────────────────────────────────────────────────── */
+    .controls {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 20px;
+      align-items: center;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Search */
+    .search-wrap {
+      position: relative;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+    #searchInput {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px 8px 36px;
+      font-family: var(--font);
+      font-size: 0.85rem;
+      color: var(--text);
+      width: 220px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    #searchInput:focus { border-color: var(--accent); }
+    #searchInput::placeholder { color: var(--text-muted); }
+
+    /* Download button */
+    .btn-download {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--accent3);
+      background: rgba(63,185,80,0.1);
+      color: var(--accent3);
+      font-family: var(--font);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-download:hover { background: rgba(63,185,80,0.2); box-shadow: 0 0 16px rgba(63,185,80,0.2); }
+
+    /* ── Stats bar ───────────────────────────────────────────────── */
+    .stats-bar {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px 28px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .stat-icon { font-size: 1.4rem; }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); }
+    .stat-value { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+
+    /* ── Book Grid ───────────────────────────────────────────────── */
+    .main-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .section-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .badge-best { background: var(--tag-best-bg); color: var(--tag-best-text); }
+    .badge-new  { background: var(--tag-new-bg);  color: var(--tag-new-text);  }
+
+    .book-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Book Card ───────────────────────────────────────────────── */
+    .book-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.22s, border-color 0.22s, box-shadow 0.22s;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .book-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .book-rank {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 2;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 0.8rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .book-rank.rank-1 { background: var(--gold); color: #000; border-color: var(--gold); }
+    .book-rank.rank-2 { background: var(--silver); color: #000; border-color: var(--silver); }
+    .book-rank.rank-3 { background: var(--bronze); color: #fff; border-color: var(--bronze); }
+
+    .book-img-wrap {
+      width: 100%;
+      aspect-ratio: 2/3;
+      overflow: hidden;
+      background: var(--surface2);
+      position: relative;
+    }
+    .book-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s;
+    }
+    .book-card:hover .book-img-wrap img { transform: scale(1.04); }
+
+    .book-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    .book-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .book-author {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .book-publisher {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+    .book-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+    .book-price { font-size: 0.85rem; font-weight: 700; color: var(--accent2); }
+    .book-rating {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.78rem;
+      color: #f1c40f;
+      font-weight: 600;
+    }
+
+    /* ── Loading / Empty ─────────────────────────────────────────── */
+    .loading-wrap, .empty-wrap {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--text-muted);
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 0.95rem; }
+
+    /* ── Table view ──────────────────────────────────────────────── */
+    .view-toggle {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+    .view-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .view-btn.active { border-color: var(--accent); background: var(--tag-best-bg); color: var(--accent); }
+
+    .book-table-wrap { overflow-x: auto; }
+    .book-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .book-table th {
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+    .book-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: middle;
+    }
+    .book-table tr:hover td { background: var(--surface2); }
+    .book-table .td-rank { font-weight: 700; text-align: center; }
+    .book-table .td-thumb { width: 40px; }
+    .book-table .td-thumb img { width: 36px; height: 54px; object-fit: cover; border-radius: 4px; }
+    .book-table .td-title { font-weight: 600; }
+    .book-table .td-price { color: var(--accent2); font-weight: 700; }
+    .book-table .td-rating { color: #f1c40f; font-weight: 600; }
+    .book-table a { color: inherit; text-decoration: none; }
+    .book-table a:hover { color: var(--accent); }
+
+    /* ── Toast ───────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      font-size: 0.88rem;
+      color: var(--text);
+      box-shadow: var(--shadow);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      .controls { grid-template-columns: 1fr auto; }
+      .search-wrap { grid-column: span 2; }
+      .search-wrap #searchInput { max-width: none; }
+    }
+    @media (max-width: 768px) {
+      .category-section { position: relative; top: 0; } /* Unstick on mobile to save space */
+      .controls { gap: 12px; }
+      .book-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+      .header-inner { padding: 0 16px; }
+      .category-inner { padding: 0 16px; }
+      .hero, .controls, .stats-bar, .main-content { padding-left: 16px; padding-right: 16px; }
+      .category-label { display: none; }
+    }
+    @media (max-width: 480px) {
+      .book-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat-card { padding: 10px 14px; }
+      .control-group { width: 100%; justify-content: space-between; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <div class="logo">📚 Yes24 트렌드 <span>— 도서 정보 뷰어</span></div>
+    <div class="header-spacer"></div>
+    <div id="updatedAt">데이터 로딩 중…</div>
+  </div>
+</header>
+
+<!-- ── Hero ────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <h1>카테고리별 <em>도서 트렌드</em></h1>
+  <p>Yes24 베스트셀러 &amp; 신작 도서를 탐색하고 스마트하게 관리하세요.</p>
+</section>
+
+<!-- ── Category Bar ────────────────────────────────────────────────────── -->
+<nav class="category-section">
+  <div class="category-inner">
+    <div class="category-label">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      카테고리
+    </div>
+    <div class="cat-chips" id="catChips"></div>
+  </div>
+</nav>
+
+<!-- ── Controls ─────────────────────────────────────────────────────────── -->
+<div class="controls">
+  <!-- 베스트셀러 / 신작 -->
+  <div class="control-group">
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tabBest" onclick="switchMode('best')">🏆 베스트</button>
+      <button class="mode-tab" id="tabNew" onclick="switchMode('new')">✨ 신작</button>
+    </div>
+    
+    <div class="sort-wrap">
+      <select id="sortSelect" onchange="renderBooks()" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); padding:8px 12px; font-family:var(--font); font-size:0.85rem; outline:none; cursor:pointer; transition: border-color 0.2s;">
+        <option value="rank">순위순</option>
+        <option value="title">제목순</option>
+        <option value="price_asc">가격 낮은순</option>
+        <option value="price_desc">가격 높은순</option>
+        <option value="date">최신 출간순</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 검색 -->
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="searchInput" type="text" placeholder="책 제목, 저자, ISBN 검색…" oninput="renderBooks()" style="width: 100%; max-width: 400px;" />
+  </div>
+
+  <div class="control-group">
+    <button class="btn-download" onclick="downloadCSV()" title="전체 CSV 다운로드">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      전체목록 CSV로 다운로드
+    </button>
+    <button class="btn-download" id="btnCartDownload" onclick="downloadCartCSV()" style="border-color:var(--accent); color:var(--accent); background:rgba(88,166,255,0.1);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+      담은 책만 CSV로 다운로드 (<span id="cartCount">0</span>)
+    </button>
+    <button class="btn-download" onclick="clearCart()" style="border-color:var(--accent2); color:var(--accent2); background:rgba(247,129,102,0.1);" title="장바구니 비우기">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+      초기화
+    </button>
+  </div>
+</div>
+
+<!-- ── Stats ────────────────────────────────────────────────────────────── -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat-card"><span class="stat-icon">📂</span><div><div class="stat-label">카테고리</div><div class="stat-value" id="statCat">—</div></div></div>
+  <div class="stat-card"><span class="stat-icon">📖</span><div><div class="stat-label">현재 표시 권수</div><div class="stat-value" id="statBooks">—</div></div></div>
+  <div class="stat-card"><span class="stat-icon">⏳</span><div><div class="stat-label">데이터 수집 기준</div><div class="stat-value" id="statUpdated">—</div></div></div>
+</div>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────── -->
+<main class="main-content">
+  <div class="section-header">
+    <span class="section-title" id="sectionTitle">도서 목록</span>
+    <span class="section-badge badge-best" id="sectionBadge">베스트셀러</span>
+    <div class="view-toggle">
+      <button class="view-btn active" id="btnGrid" title="그리드 보기" onclick="switchView('grid')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+      <button class="view-btn" id="btnList" title="리스트 보기" onclick="switchView('list')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="booksContainer">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div class="loading-text">데이터를 불러오는 중…</div>
+    </div>
+  </div>
+</main>
+
+<!-- ── Footer ───────────────────────────────────────────────────────────── -->
+<footer>
+  <p>데이터 출처: <a href="https://www.yes24.com" target="_blank">Yes24</a> · 매일 자동 갱신 (GitHub Actions)</p>
+  <p style="margin-top:6px">© 2025 Yes24 트렌드 뷰어 · <a href="https://github.com" target="_blank">GitHub</a></p>
+</footer>
+
+<!-- ── Toast ────────────────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════════════════════════════════════
+let allData = null;       // full JSON
+let mode = 'best';        // 'best' | 'new'
+let activeCatId = null;   // selected category id
+let viewType = 'grid';    // 'grid' | 'list'
+let cart = new Set();     // store book ISBNs or goods_no in cart
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Data Loading
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadData() {
+  try {
+    const res = await fetch('./data/books.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    allData = await res.json();
+    init();
+  } catch (e) {
+    console.warn('books.json 로드 실패, 샘플 데이터를 사용합니다.', e);
+    loadSampleData();
+  }
+}
+
+function loadSampleData() {
+  allData = { updated_at: '데이터 없음', categories: [] };
+  document.getElementById('booksContainer').innerHTML = `
+    <div class="empty-wrap">
+      <div style="font-size:3rem;margin-bottom:16px">🕷️</div>
+      <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">아직 크롤링된 데이터가 없습니다</div>
+      <div style="font-size:0.88rem;line-height:1.6;max-width:480px;margin:0 auto">
+        <code>crawler.py</code>를 실행하면 <code>data/books.json</code>이 생성됩니다.<br>
+        100권 고화질 크롤러 버전(v2)이 실행되어야 합니다.
+      </div>
+    </div>`;
+  document.getElementById('updatedAt').textContent = '데이터 없음';
+}
+
+function updateCartUI() {
+  document.getElementById('cartCount').textContent = cart.size;
+}
+
+function toggleCart(e, goodsNo) {
+  e.stopPropagation();
+  if (cart.has(goodsNo)) {
+    cart.delete(goodsNo);
+    showToast('장바구니에서 제거했습니다.');
+  } else {
+    cart.add(goodsNo);
+    showToast('장바구니에 담았습니다.');
+  }
+  updateCartUI();
+  renderBooks(); // update button styles
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function clearCart() {
+  if (cart.size === 0) {
+    showToast('장바구니가 이미 비어 있습니다.');
+    return;
+  }
+  if (!confirm('담은 책 목록을 모두 비우시겠습니까?')) return;
+  cart.clear();
+  showToast('장바구니를 비웠습니다.');
+  updateCartUI();
+  renderBooks();
+}
+
+function init() {
+  const cats = allData.categories || [];
+  const updateTxt = (allData.updated_at || '—') + ' 기준';
+  document.getElementById('updatedAt').textContent = '업데이트: ' + updateTxt;
+  document.getElementById('statUpdated').textContent = updateTxt;
+  document.getElementById('statCat').textContent = cats.length;
+
+  activeCatId = cats.length > 0 ? cats[0].id : null;
+  renderCatChips(cats);
+  renderBooks();
+}
+
+function renderCatChips(cats) {
+  const wrap = document.getElementById('catChips');
+  wrap.innerHTML = '';
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-chip' + (cat.id === activeCatId ? ' active' : '');
+    btn.textContent = cat.name;
+    btn.onclick = () => { activeCatId = cat.id; renderCatChips(cats); renderBooks(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function getActiveBooks() {
+  if (!allData || !activeCatId) return [];
+  const cat = allData.categories.find(c => c.id === activeCatId);
+  if (!cat) return [];
+  return (mode === 'best' ? cat.bestseller : cat.new) || [];
+}
+
+function renderBooks() {
+  const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  const sortBy = document.getElementById('sortSelect').value;
+  let books = [...getActiveBooks()]; // clone to avoid mutation
+
+  // 검색 필터
+  if (query) {
+    books = books.filter(b =>
+      (b.title || '').toLowerCase().includes(query) ||
+      (b.author || '').toLowerCase().includes(query) ||
+      (b.isbn || '').includes(query)
+    );
+  }
+
+  // 정렬 로직
+  books.sort((a, b) => {
+    if (sortBy === 'rank') return (a.rank || 999) - (b.rank || 999);
+    if (sortBy === 'title') return (a.title || "").localeCompare(b.title || "");
+    if (sortBy === 'price_asc') return (a.price_sale || 0) - (b.price_sale || 0);
+    if (sortBy === 'price_desc') return (b.price_sale || 0) - (a.price_sale || 0);
+    if (sortBy === 'date') {
+      // 날짜 파싱 (예: "2024년 10월" -> "202410")
+      const parseDate = (s) => (s || "").replace(/[^0-9]/g, "").padEnd(6, '0');
+      return parseDate(b.pub_date).localeCompare(parseDate(a.pub_date));
+    }
+    return 0;
+  });
+
+  const cat = (allData?.categories || []).find(c => c.id === activeCatId);
+  document.getElementById('sectionTitle').textContent = cat ? cat.name : '도서 목록';
+  document.getElementById('statBooks').textContent = books.length + '권';
+
+  const badge = document.getElementById('sectionBadge');
+  badge.textContent = mode === 'best' ? '베스트셀러' : '신작';
+  badge.className = 'section-badge ' + (mode === 'best' ? 'badge-best' : 'badge-new');
+
+  const container = document.getElementById('booksContainer');
+
+  if (!books.length) {
+    container.innerHTML = `<div class="empty-wrap"><div style="font-size:2.5rem;margin-bottom:12px">🔍</div><div>결과가 없습니다.</div></div>`;
+    return;
+  }
+
+  if (viewType === 'grid') {
+    container.innerHTML = `<div class="book-grid">${books.map(bookCardHTML).join('')}</div>`;
+  } else {
+    container.innerHTML = `<div class="book-table-wrap"><table class="book-table">${bookTableHTML(books)}</table></div>`;
+  }
+}
+
+function bookCardHTML(b) {
+  const imgSrc = b.image || 'https://image.yes24.com/momo/Noimg_L.jpg';
+  const normalPrice = b.price_normal ? b.price_normal.toLocaleString() + '원' : '정가 없음';
+  const salePrice = b.price_sale ? b.price_sale.toLocaleString() + '원' : '판매가 없음';
+  const inCart = cart.has(b.goods_no);
+
+  return `
+    <div class="book-card" onclick="openBook('${b.link || '#'}')">
+      <span class="book-rank ${rankClass(b.rank)}">${b.rank || '?'}</span>
+      <button class="cart-btn" onclick="toggleCart(event, '${b.goods_no}')" style="position:absolute; top:8px; right:8px; z-index:3; width:32px; height:32px; border-radius:50%; border:none; background:${inCart ? 'var(--accent)' : 'var(--surface2)'}; color:${inCart ? '#000' : 'var(--text-muted)'}; cursor:pointer; font-size:1.1rem; box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center; transition:all 0.2s;" title="담기">
+        ${inCart ? '🛍️' : '🛒'}
+      </button>
+      <div class="book-img-wrap">
+        <img src="${imgSrc}" alt="${escHtml(b.title)}" loading="lazy" />
+      </div>
+      <div class="book-body">
+        <div class="book-title">${escHtml(b.title)}</div>
+        <div class="book-author">${escHtml(b.author || '—')}</div>
+        <div style="margin-top:auto">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div style="font-size:0.7rem; color:var(--text-muted); text-decoration:line-through;">${normalPrice}</div>
+            <div class="book-price" style="font-size:0.95rem; color:var(--accent2); font-weight:800;">${salePrice}</div>
+          </div>
+          <div class="book-footer" style="margin-top:8px; padding-top:8px;">
+            <span style="font-size:0.65rem; color:var(--text-muted);">ISBN: ${escHtml(b.isbn || '—')}</span>
+            <span class="book-rating" style="font-size:0.8rem; color:#f1c40f; font-weight:700;">★ ${escHtml(b.rating || '0.0')}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bookTableHTML(books) {
+  const rows = books.map(b => {
+    const salePrice = b.price_sale ? b.price_sale.toLocaleString() + '원' : '판매가 없음';
+    const normalPrice = b.price_normal ? b.price_normal.toLocaleString() + '원' : '정가 없음';
+    const inCart = cart.has(b.goods_no);
+
+    return `<tr>
+      <td class="td-rank">${b.rank || '?'}</td>
+      <td>
+        <button onclick="toggleCart(event, '${b.goods_no}')" style="width:28px; height:28px; border-radius:4px; border:1px solid ${inCart? 'var(--accent)' : 'var(--border)'}; background:${inCart? 'var(--accent)' : 'var(--surface)'}; color:${inCart? '#000' : 'var(--text-muted)'}; cursor:pointer; font-size:0.9rem;">
+          ${inCart ? '🛍️' : '🛒'}
+        </button>
+      </td>
+      <td class="td-thumb"><img src="${b.image || ''}" alt="" loading="lazy"></td>
+      <td class="td-title"><a href="${b.link || '#'}" target="_blank" rel="noopener">${escHtml(b.title)}</a></td>
+      <td>${escHtml(b.author || '—')}</td>
+      <td>${escHtml(b.publisher || '—')}</td>
+      <td style="white-space:nowrap">${escHtml(b.pub_date || '—')}</td>
+      <td style="white-space:nowrap; text-align:right;">
+        <div style="font-size:0.7rem; color:var(--text-muted); text-decoration:line-through;">${normalPrice}</div>
+        <div class="td-price">${salePrice}</div>
+      </td>
+      <td>${escHtml(b.isbn || '—')}</td>
+      <td class="td-rating">★ ${escHtml(b.rating || '0.0')}</td>
+    </tr>`;
+  }).join('');
+  return `<thead><tr>
+    <th>순위</th><th>담기</th><th>표지</th><th>제목</th><th>저자</th><th>출판사</th><th>출판일</th><th>가격</th><th>ISBN</th><th>평점</th>
+  </tr></thead><tbody>${rows}</tbody>`;
+}
+
+function switchMode(m) {
+  mode = m;
+  document.getElementById('tabBest').classList.toggle('active', m === 'best');
+  document.getElementById('tabNew').classList.toggle('active',  m === 'new');
+  renderBooks();
+}
+
+function switchView(v) {
+  viewType = v;
+  document.getElementById('btnGrid').classList.toggle('active', v === 'grid');
+  document.getElementById('btnList').classList.toggle('active', v === 'list');
+  renderBooks();
+}
+
+function rankClass(r) {
+  const n = parseInt(r);
+  if (n === 1) return 'rank-1';
+  if (n === 2) return 'rank-2';
+  if (n === 3) return 'rank-3';
+  return '';
+}
+
+function openBook(url) { if (url && url !== '#') window.open(url, '_blank'); }
+
+function downloadCSV() {
+  const books = getActiveBooks();
+  exportToCSV(books, `yes24_export_${activeCatId}_${mode}.csv`);
+}
+
+function downloadCartCSV() {
+  if (cart.size === 0) {
+    showToast('장바구니가 비어 있습니다.');
+    return;
+  }
+  
+  // Find cart items across ALL categories so we get everything user carted
+  let cartBooks = [];
+  let cartIdsFound = new Set();
+  
+  if (allData && allData.categories) {
+    for (const cat of allData.categories) {
+      for (const b of (cat.bestseller || [])) {
+        if (cart.has(b.goods_no) && !cartIdsFound.has(b.goods_no)) {
+          cartBooks.push(b);
+          cartIdsFound.add(b.goods_no);
+        }
+      }
+      for (const b of (cat.new || [])) {
+        if (cart.has(b.goods_no) && !cartIdsFound.has(b.goods_no)) {
+          cartBooks.push(b);
+          cartIdsFound.add(b.goods_no);
+        }
+      }
+    }
+  }
+
+  exportToCSV(cartBooks, `yes24_cart_export.csv`);
+}
+
+function exportToCSV(books, filename) {
+  if (!books || !books.length) return;
+  const headers = ['순위', '제목', '저자', '출판사', '출판일', '정가', '할인가', 'ISBN', '평점', '링크'];
+  const rows = books.map(b => [
+    b.rank, b.title, b.author, b.publisher, b.pub_date, b.price_normal, b.price_sale, 
+    b.isbn ? `\t${b.isbn}` : '', // Prefix with tab to prevent scientific notation in Excel
+    b.rating, b.link
+  ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`));
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+function escHtml(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+loadData();
+</script>
+</body>
+</html>
